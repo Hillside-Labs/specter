@@ -25,6 +25,14 @@ def load_yaml_from_url(url):
 
 url = input("Enter your OpenAPI specification yaml url:\n")
 
+print("Enter information related to the business:")
+
+audience = input("the audience is: ")
+use_cases = input("use-cases are: ")
+comments = input("any other comments (for example, weightage is given to certain aspect): ")
+context = f"The audience for the given API pecification is {audience}, use-cases are {use_cases}. \
+Other things to note are {comments}"
+
 endpoints, ep_by_method = OpenAPIMinifierService().run([load_yaml_from_url(url)])
 
 openapi_format_instructions = """Use the following format:
@@ -53,11 +61,11 @@ Use inner monologue or sequence of queries to reach a conclusion. \
 Give usage details and examples when discussing an API endpoint.
 """
 
-query = "what is the most important API endpoint"
-
 faq = [
-    "what is the most important API endpoint",
-    "",
+    "What is the most important API endpoint?",
+    "What is a potential chokepoint for our customers?",
+    "Which APIs have to be monitored for cost optimization?",
+    "What are the sources of potential customer retention risk?"
 ]
 
 JsonDataReader = download_loader("JsonDataReader")
@@ -87,14 +95,20 @@ llm = OpenAI(temperature=0.2, model=model_name)
 service_context = ServiceContext.from_defaults(llm=llm)
 
 # %%
-if not os.path.exists("./storage"):
+def sanitize(url):
+    valid_chars = re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*').findall(url)
+    return ''.join(valid_chars)
+
+persist_dir = f"./storage/{sanitize(url)}"
+
+if not os.path.exists(persist_dir):
     documents = load_data(ep_by_method["post"])
     index = VectorStoreIndex.from_documents(
         documents, service_context=service_context
     )
-    index.storage_context.persist()
+    index.storage_context.persist(persist_dir)
 else:
-    storage_context = StorageContext.from_defaults(persist_dir="./storage")
+    storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
     index = load_index_from_storage(storage_context)
 
 template = (
@@ -103,6 +117,7 @@ template = (
     "{context_str}"
     "\n---------------------\n"
     f"{primer_prompt}"
+    f"{context}"
     f"{openapi_format_instructions}"
     "Given this information, please answer the question: {query_str}\n"
 )
@@ -110,5 +125,8 @@ qa_template = Prompt(template)
 
 query_engine = index.as_query_engine(text_qa_template=qa_template)
 
-response = query_engine.query(query)
-print(extract_final_answer(response.response))
+for q in faq:
+    response = query_engine.query(q)
+    print("Query:", q)
+    print("Final Answer:", extract_final_answer(response.response))
+    print()
