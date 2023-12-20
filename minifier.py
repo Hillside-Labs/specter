@@ -190,9 +190,7 @@ class OpenAPIMinifierService:
 
         if self.keys_to_keep["good_responses"]:
             if "responses" in endpoint and "200" in endpoint["responses"]:
-                extracted_endpoint_data["responses"]["200"] = endpoint["responses"].get(
-                    "200"
-                )
+                extracted_endpoint_data["responses"]["200"] = endpoint["responses"].get("200")
 
         if self.keys_to_keep["bad_responses"]:
             if "responses" in endpoint:

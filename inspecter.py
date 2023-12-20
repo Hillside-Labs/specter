@@ -6,6 +6,7 @@ import re
 import json
 import yaml
 import logging
+import requests
 from minifier import OpenAPIMinifierService
 
 from llama_index.readers.schema.base import Document
@@ -13,17 +14,18 @@ from llama_index.llms import OpenAI
 from llama_index import VectorStoreIndex, download_loader, \
     StorageContext, load_index_from_storage, ServiceContext, Prompt
 
-file_dirs = [
-    # "./data/do_openapi.yaml",
-    "./data/stripe.yaml",
-    # "./data/openai.yaml",
-    # "./data/twitter.yaml",
-    # "./data/adobe_aem.yaml"
-]
+def load_yaml_from_url(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        yaml_data = yaml.safe_load(response.content.decode('utf-8'))
+        return yaml_data
+    else:
+        print(f"Failed to fetch data from {url}. Status code: {response.status_code}")
+        return None
 
-endpoints, ep_by_method = OpenAPIMinifierService().run(
-    [yaml.load(open(file_dir), Loader=yaml.Loader) for file_dir in file_dirs]
-)
+url = input("Enter your OpenAPI specification yaml url:\n")
+
+endpoints, ep_by_method = OpenAPIMinifierService().run([load_yaml_from_url(url)])
 
 openapi_format_instructions = """Use the following format:
 ```
@@ -50,10 +52,7 @@ Work out your own solution before rushing to conclusion. \
 Use inner monologue or sequence of queries to reach a conclusion. \
 Give usage details and examples when discussing an API endpoint.
 """
-# this primer_prompt is giving weird responses
 
-# Assuming 80% of the business comes from droplets, what is the most important API call to the business
-# Customer or Business context?
 query = "what is the most important API endpoint"
 
 faq = [
@@ -74,21 +73,17 @@ def load_data(input_data: list[dict]):
     return loaded
 
 def extract_final_answer(model_response):
-    # Split the response by "Final Answer:"
     parts = model_response.split("Final Answer:")
 
-    # Check if there are multiple occurrences of "Final Answer:"
     if len(parts) > 1:
-        # Extract the content after the last "Final Answer:"
         logging.info(parts[0])
         final_answer = parts[-1].strip()
         return final_answer
     else:
-        # If there is no "Final Answer:", return None or handle accordingly
         return None
 
 model_name="gpt-4"
-llm = OpenAI(temperature=0.5, model=model_name)
+llm = OpenAI(temperature=0.2, model=model_name)
 service_context = ServiceContext.from_defaults(llm=llm)
 
 # %%
@@ -115,15 +110,5 @@ qa_template = Prompt(template)
 
 query_engine = index.as_query_engine(text_qa_template=qa_template)
 
-# from IPython.display import display, Markdown
-# def display_prompt_dict(prompts_dict):
-#     for k, p in prompts_dict.items():
-#         text_md = f"**Prompt Key**: {k}<br>" f"**Text:** <br>"
-#         display(Markdown(text_md))
-#         print(p.get_template())
-#         display(Markdown("<br><br>"))
-# 
-# display_prompt_dict(query_engine.get_prompts())
-# response = query_engine.query(query)
-# print(extract_final_answer(response.response))
-# %%
+response = query_engine.query(query)
+print(extract_final_answer(response.response))
