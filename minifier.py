@@ -42,17 +42,18 @@ class OpenAPIMinifierService:
     def run(self, open_api_specs):
         full_open_api_specs = self.create_full_spec(open_api_specs)
 
-        minified_endpoints, endpoints_by_method = self.minify(full_open_api_specs)
+        endpoints_by_method = self.minify(full_open_api_specs)
 
-        minified_endpoints = sorted(
-            minified_endpoints, key=lambda x: (x["tag"], x["operation_id"])
-        )
+        for method in endpoints_by_method.keys():
+            endpoints_by_method[method] = sorted(
+                endpoints_by_method[method], key=lambda x: (x["tag"], x["operation_id"])
+            )
 
-        minified_endpoints = self.create_endpoint_documents(
-            minified_endpoints, full_open_api_specs
-        )
+            endpoints_by_method[method] = self.create_endpoint_documents(
+                endpoints_by_method[method], full_open_api_specs
+            )
 
-        return [minified_endpoints, endpoints_by_method]
+        return endpoints_by_method
 
     def create_full_spec(self, open_api_specs):
         merged_open_api_spec = None
@@ -60,37 +61,33 @@ class OpenAPIMinifierService:
         for open_api_spec in open_api_specs:
             if merged_open_api_spec is None:
                 merged_open_api_spec = open_api_spec
+
             else:
                 merged_open_api_spec["paths"].update(open_api_spec["paths"])
 
                 if "components" in open_api_spec:
                     if "components" not in merged_open_api_spec:
                         merged_open_api_spec["components"] = {}
-                    for component_type, components in open_api_spec[
-                        "components"
-                    ].items():
+
+                    for component_type, components in open_api_spec["components"].items():
                         if component_type not in merged_open_api_spec["components"]:
                             merged_open_api_spec["components"][component_type] = {}
-                        merged_open_api_spec["components"][component_type].update(
-                            components
-                        )
+
+                        merged_open_api_spec["components"][component_type].update(components)
 
         merged_open_api_spec["paths"] = dict(
             sorted(merged_open_api_spec["paths"].items())
         )
         if "components" in merged_open_api_spec:
             for component_type in merged_open_api_spec["components"]:
-                merged_open_api_spec["components"][component_type] = dict(
-                    sorted(merged_open_api_spec["components"][component_type].items())
-                )
+                merged_open_api_spec["components"][component_type] = dict(sorted(merged_open_api_spec["components"][component_type].items()))
 
 
         return merged_open_api_spec
 
     def minify(self, open_api_spec):
-        server_url = open_api_spec["servers"][0]["url"]
+        server_url = open_api_spec["servers"][-1]["url"]
 
-        minified_endpoints = []
         endpoints_by_method = defaultdict(list)
 
         for path, methods in open_api_spec["paths"].items():
@@ -141,10 +138,10 @@ class OpenAPIMinifierService:
                     "server_url": f"{server_url}{path}",
                     "content": content_string,
                 }
-                endpoints_by_method[method].append(endpoint_dict)
-                minified_endpoints.append(endpoint_dict)
 
-        return [minified_endpoints, endpoints_by_method]
+                endpoints_by_method[method].append(endpoint_dict)
+
+        return endpoints_by_method
 
     def resolve_refs(self, open_api_spec, endpoint):
         if isinstance(endpoint, dict):
@@ -312,7 +309,7 @@ class OpenAPIMinifierService:
                 )
 
             else:
-                endpoint["title"] = {endpoint["server_url"]}
+                endpoint["title"] = endpoint["server_url"]
 
             filename = f"{tag_number}_{endpoint['tag']}_{endpoint['operation_id']}_{self.operationID_counter}"
             endpoint["filename"] = filename
