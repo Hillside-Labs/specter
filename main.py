@@ -14,12 +14,14 @@ from llama_index.llms import OpenAI
 from llama_index.readers.schema.base import Document
 from llama_index import VectorStoreIndex, StorageContext, load_index_from_storage, ServiceContext
 
-def load_yaml_from_url(url):
+def load_from_url(url, data_format):
     response = requests.get(url)
 
     if response.status_code == 200:
-        yaml_data = yaml.safe_load(response.content.decode('utf-8'))
-        return yaml_data
+        if data_format == "yaml":
+            return yaml.safe_load(response.content.decode('utf-8'))
+        elif data_format == "json":
+            return response.json()
     else:
         print(f"Failed to fetch data from {url}. Status code: {response.status_code}")
         return None
@@ -60,13 +62,14 @@ def load_documents_and_create_index(ep_by_method, persist_dir, service_context):
     return index
 
 def main():
-    url = input("Enter your OpenAPI specification yaml url:\n")
+    data_format = input("Type yaml or json: ")
+    url = input("Enter your OpenAPI specification url:\n")
     print("Enter information related to the business:")
     audience = input("The audience is: ")
     use_cases = input("Use-cases are: ")
     comments = input("Any other comments (for example, weightage to be given to a certain aspect): ")
 
-    _, ep_by_method = OpenAPIMinifierService().run([load_yaml_from_url(url)])
+    ep_by_method = OpenAPIMinifierService().run([load_from_url(url, data_format)])
     persist_dir = f"./storage/{sanitize_path(url)}"
     service_context = ServiceContext.from_defaults(llm=OpenAI(temperature=0.2, model="gpt-4"))
 
