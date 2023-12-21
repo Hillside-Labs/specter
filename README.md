@@ -1,7 +1,21 @@
 ## Steps to run
 1. `pip install -r requirements.txt`
 2. `cp devenv.yaml.tmpl devenv.yaml` and add your OpenAI API key
-3. `python main.py`
+3. `we python3 main.py`
+
+## Web App steps
+1. `flask run`
+2. run this 
+```
+curl --location 'http://127.0.0.1:5000/analyse' \
+--header 'Content-Type: application/json' \
+--data '{
+    "data_format": "json",
+    "spec_url": "https://api.apis.guru/v2/specs/twitter.com/current/2.61/openapi.json",
+    "audience": "college students",
+    "use_cases": "building side projects"
+}'
+```
 
 ## Assumptions and Methodology used:
 * Parse the given spec into different endpoints
