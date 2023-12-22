@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Specter by HSL</title>
+    <link rel="stylesheet" href="./static/answers.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Query Answers</h1>
+
+        {% if query_answers %}
+        <ul>
+            {% for key, value in query_answers.items() %}
+            <li><strong>{{ key }}</strong> {{ value }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No answers available.</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>

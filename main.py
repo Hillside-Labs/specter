@@ -44,7 +44,7 @@ def download_json_data(input_data: list[dict]):
     return loaded
 
 
-def extract_final_answer(model_response):
+def extract_final_answer(model_response: str):
     parts = model_response.split("Final Answer:")
 
     if len(parts) > 1:
@@ -52,7 +52,7 @@ def extract_final_answer(model_response):
         final_answer = parts[-1].strip()
         return final_answer
     else:
-        return None
+        return ""
 
 
 def sanitize_path(url):
@@ -74,13 +74,13 @@ def load_documents_and_create_index(ep_by_method, persist_dir, service_context):
     return index
 
 
-def main(data_format, spec_url, audience, use_cases, comments):
+def main(data_format: str, spec_url: str, audience: str, use_cases: str, comments: str):
     ep_by_method = OpenAPIMinifierService().run(
         [load_from_spec_url(spec_url, data_format)]
     )
     persist_dir = f"./storage/{sanitize_path(spec_url)}"
     service_context = ServiceContext.from_defaults(
-        llm=OpenAI(temperature=0.2, model="gpt-4")
+        llm=OpenAI(temperature=0.3)
     )
 
     index = load_documents_and_create_index(ep_by_method, persist_dir, service_context)
@@ -91,25 +91,25 @@ def main(data_format, spec_url, audience, use_cases, comments):
     )
     query_engine = index.as_query_engine(text_qa_template=qa_template)
 
-    final_response = ""
+    final_response = {}
     for que in constants.FAQ:
         response = query_engine.query(que)
-        final_response += (
-            f"Query: {que}\n"
-            f"Final Answer: {extract_final_answer(response.response)}\n\n"
-        )
+        final_response[que] = extract_final_answer(response.response)
     return final_response
 
-
 if __name__ == "__main__":
-    
     data_format = input("Type yaml or json: ")
     url = input("Enter your OpenAPI specification url:\n")
 
     print("Enter information related to the business:")
-    
+
     audience = input("The audience is: ")
     use_cases = input("Use-cases are: ")
-    comments = input("Any other comments (for example, weightage to be given to a certain aspect): ")
+    comments = input(
+        "Any other comments (for example, weightage to be given to a certain aspect): "
+    )
 
-    print(main(data_format, url, audience, use_cases, comments))
+    for q,a in main(data_format, url, audience, use_cases, comments).items():
+        print("Query: ", q)
+        print("Answer: ", a)
+        print()

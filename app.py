@@ -1,25 +1,33 @@
-from flask import Flask, request
 from main import main
+from flask import *
+from wtforms import *
+from wtforms.validators import AnyOf
 
 app = Flask(__name__)
 
+class AnalysisForm(Form):
+    data_format = StringField("Format", [AnyOf(["json", "yaml"])])
+    spec_url = URLField("Spec URL", [validators.URL()])
+    audience = StringField("Audience")
+    use_cases = StringField("Use-cases")
+    comments = StringField("Comments")
 
-@app.route("/")
-def hello_world():
-    return "<h1>This is Specter by Hillside Labs</h1><p>Analyse your API specification (OAS) to draw important observations</p>"
+@app.route("/", methods=["POST", "GET"])
+def index():
+    form = AnalysisForm(request.form)
 
+    if request.method == "GET":
+        return render_template("index.html")
 
-# todo: add validations and input sanitization in body
-# use templates to render html from analyse function
-# add an input form html on landing page
-# deploy to fly
-@app.route("/analyse", methods=["POST"])
-def analyse():
-    body = request.get_json()
-    return main(
-        body["data_format"],
-        body["spec_url"],
-        body["audience"] if "audience" in body else "",
-        body["use_cases"] if "use_cases" in body else "",
-        body["comments"] if "comments" in body else "",
-    )
+    elif request.method == "POST" and form.validate():
+        return render_template(
+            "answers.html",
+            query_answers=main(
+                form.data_format.data,
+                form.spec_url.data,
+                form.audience.data,
+                form.use_cases.data,
+                form.comments.data,
+            ),
+        )
+# todo: deploy to fly

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Specter by Hillside Labs</title>
+    <link rel="stylesheet" href="./static/main.css">
+</head>
+
+<body>
+    <h2>This is Specter by Hillside Labs</h2>
+    <p>Analyse your API specification (OAS) to draw important observations</p>
+    <div class="container">
+        <div class="container__form">
+            <form class="form" method="post">
+                <select name="data_format" class="input">
+                    <option value="yaml">YAML</option>
+                    <option value="json">JSON</option>
+                </select>
+                <input name="spec_url" placeholder="URL for the OpenAPI Spec" class="input" />
+                <input name="audience" placeholder="Tell us about your target audience" class="input" />
+                <input name="use_cases" placeholder="What are the use-cases for the API?" class="input" />
+                <input name="comments" placeholder="Any other comments (e.g. weightage to be given to a certain aspect)" class="input" />
+                <button type="submit" class="btn">Submit</button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

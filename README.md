@@ -4,18 +4,8 @@
 3. `we python3 main.py`
 
 ## Web App steps
-1. `flask run`
-2. run this 
-```
-curl --location 'http://127.0.0.1:5000/analyse' \
---header 'Content-Type: application/json' \
---data '{
-    "data_format": "json",
-    "spec_url": "https://api.apis.guru/v2/specs/twitter.com/current/2.61/openapi.json",
-    "audience": "college students",
-    "use_cases": "building side projects"
-}'
-```
+1. `flask run` or `flask run --debug`
+2. Go to `localhost:5000` on your browser
 
 ## Assumptions and Methodology used:
 * Parse the given spec into different endpoints
