@@ -27,15 +27,17 @@ Use inner monologue or sequence of queries to reach a conclusion. \
 Give usage details and examples when discussing an API endpoint.
 """
 
+
 def create_business_context(audience, use_cases, comments):
     ctx = "For the given API specification,"
     if audience:
-        ctx += f"audience is {audience}, " 
+        ctx += f"audience is {audience}, "
     if use_cases:
         ctx += f"use-cases are {use_cases}, "
     if comments:
         ctx += f"other things to note are {comments}."
     return ctx
+
 
 def create_qa_template(primer_prompt, context, openapi_format_instructions):
     template = (
@@ -50,6 +52,7 @@ def create_qa_template(primer_prompt, context, openapi_format_instructions):
     )
 
     return Prompt(template)
+
 
 FAQ = [
     "What is the most important API endpoint?",

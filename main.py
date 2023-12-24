@@ -12,19 +12,26 @@ from minifier import OpenAPIMinifierService
 
 from llama_index.llms import OpenAI
 from llama_index.readers.schema.base import Document
-from llama_index import VectorStoreIndex, StorageContext, load_index_from_storage, ServiceContext
+from llama_index import (
+    VectorStoreIndex,
+    StorageContext,
+    load_index_from_storage,
+    ServiceContext,
+)
 
-def load_from_url(url, data_format):
+
+def load_from_spec_url(url, data_format):
     response = requests.get(url)
 
     if response.status_code == 200:
         if data_format == "yaml":
-            return yaml.safe_load(response.content.decode('utf-8'))
+            return yaml.safe_load(response.content.decode("utf-8"))
         elif data_format == "json":
             return response.json()
     else:
         print(f"Failed to fetch data from {url}. Status code: {response.status_code}")
         return None
+
 
 def download_json_data(input_data: list[dict]):
     loaded = []
@@ -36,7 +43,8 @@ def download_json_data(input_data: list[dict]):
         loaded.append(Document(text="\n".join(useful_lines)))
     return loaded
 
-def extract_final_answer(model_response):
+
+def extract_final_answer(model_response: str):
     parts = model_response.split("Final Answer:")
 
     if len(parts) > 1:
@@ -44,16 +52,20 @@ def extract_final_answer(model_response):
         final_answer = parts[-1].strip()
         return final_answer
     else:
-        return None
+        return ""
+
 
 def sanitize_path(url):
-    valid_chars = re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*').findall(url)
-    return ''.join(valid_chars)
+    valid_chars = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*").findall(url)
+    return "".join(valid_chars)
+
 
 def load_documents_and_create_index(ep_by_method, persist_dir, service_context):
     if not os.path.exists(persist_dir):
         documents = download_json_data(ep_by_method["post"])
-        index = VectorStoreIndex.from_documents(documents, service_context=service_context)
+        index = VectorStoreIndex.from_documents(
+            documents, service_context=service_context
+        )
         index.storage_context.persist(persist_dir)
     else:
         storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
@@ -61,29 +73,43 @@ def load_documents_and_create_index(ep_by_method, persist_dir, service_context):
 
     return index
 
-def main():
-    data_format = input("Type yaml or json: ")
-    url = input("Enter your OpenAPI specification url:\n")
-    print("Enter information related to the business:")
-    audience = input("The audience is: ")
-    use_cases = input("Use-cases are: ")
-    comments = input("Any other comments (for example, weightage to be given to a certain aspect): ")
 
-    ep_by_method = OpenAPIMinifierService().run([load_from_url(url, data_format)])
-    persist_dir = f"./storage/{sanitize_path(url)}"
-    service_context = ServiceContext.from_defaults(llm=OpenAI(temperature=0.2, model="gpt-4"))
+def main(data_format: str, spec_url: str, audience: str, use_cases: str, comments: str):
+    ep_by_method = OpenAPIMinifierService().run(
+        [load_from_spec_url(spec_url, data_format)]
+    )
+    persist_dir = f"./storage/{sanitize_path(spec_url)}"
+    service_context = ServiceContext.from_defaults(
+        llm=OpenAI(temperature=0.3)
+    )
 
     index = load_documents_and_create_index(ep_by_method, persist_dir, service_context)
 
     context = constants.create_business_context(audience, use_cases, comments)
-    qa_template = constants.create_qa_template(constants.primer_prompt, context, constants.openapi_format_instructions)
+    qa_template = constants.create_qa_template(
+        constants.primer_prompt, context, constants.openapi_format_instructions
+    )
     query_engine = index.as_query_engine(text_qa_template=qa_template)
 
+    final_response = {}
     for que in constants.FAQ:
         response = query_engine.query(que)
-        print("Query:", que)
-        print("Final Answer:", extract_final_answer(response.response))
-        print()
+        final_response[que] = extract_final_answer(response.response)
+    return final_response
 
 if __name__ == "__main__":
-    main()
+    data_format = input("Type yaml or json: ")
+    url = input("Enter your OpenAPI specification url:\n")
+
+    print("Enter information related to the business:")
+
+    audience = input("The audience is: ")
+    use_cases = input("Use-cases are: ")
+    comments = input(
+        "Any other comments (for example, weightage to be given to a certain aspect): "
+    )
+
+    for q,a in main(data_format, url, audience, use_cases, comments).items():
+        print("Query: ", q)
+        print("Answer: ", a)
+        print()
